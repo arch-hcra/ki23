@@ -3,17 +3,17 @@ kind: Deployment
 metadata:
   name: ki23-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: ki23
+      app: ki23-app
   template:
     metadata:
       labels:
-        app: ki23
+        app: ki23-app
     spec:
       containers:
-      - name: ki23
-        image: archhcra/ki23:latest
+      - name: ki23-app
+        image: docker.io/archcra/ki23-app:latest
         ports:
         - containerPort: 5000
