@@ -46,11 +46,12 @@ pipeline {
                 script {
                     def manifest = "ki23-k8s-manifests/deployment.yaml"
                     def newImage = "docker.io/archcra/ki23-app:${IMAGE_TAG}" 
-
+                    sh "git checkout main"
+                    sh "git pull origin main"
             
                     sh "git clean -fd"
                     sh "git reset --hard HEAD"
-                    sh "git checkout main"
+                    
 
                     sh "sed -i \"s|image: docker.io/archcra/ki23-app:.*|image: ${newImage}|g\" ${manifest}"
 
@@ -58,8 +59,9 @@ pipeline {
                     def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
 
                     if (changes == "changed") {
-                        sh 'git config --global user.email "jenkins@example.com"'
-                        sh 'git config --global user.name "Jenkins"'
+                        echo " Изменения обнаружены в ${manifest}: ${newImage}"
+                        sh 'git config --global user.email "admin@example.com"'
+                        sh 'git config --global user.name "admin"'
 
 
                         sh "git add ${manifest}"
