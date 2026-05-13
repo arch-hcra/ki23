@@ -69,7 +69,7 @@ pipeline {
                         withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
                             sh """
                                 set -e
-                                git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23-k8s-manifests.git
+                                git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git
                                 git push origin main
                             """
                         }
