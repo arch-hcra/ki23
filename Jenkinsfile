@@ -55,7 +55,7 @@ pipeline {
                             git config user.name "Jenkins"
                             git add ${MANIFEST_PATH}
                             git commit -m "chore: update image to ${IMAGE_TAG}"
-                            git push origin main
+                            git push origin HEAD:main
                         """
                     } else {
                         echo "No changes in ${MANIFEST_PATH}, skipping commit."
