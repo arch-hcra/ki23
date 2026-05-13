@@ -47,7 +47,8 @@ pipeline {
                     def manifest = "${MANIFEST_PATH}"
                     def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
 
-            
+                    sh "git clean -fd"
+                    sh "git reset --hard HEAD"
                     sh "sed -i \"s|image: .*|image: ${newImage}|g\" ${manifest}"
 
 
