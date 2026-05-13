@@ -47,7 +47,8 @@ pipeline {
                     def manifest = "ki23-k8s-manifests/deployment.yaml"
                     def newImage = "docker.io/archcra/ki23-app:${IMAGE_TAG}" 
                     sh "git checkout main"
-                    sh "git pull origin main"
+                    sh "git fetch origin"
+                    sh "git reset --hard origin/main"
             
                     sh "git clean -fd"
                     sh "git reset --hard HEAD"
