@@ -44,43 +44,47 @@ pipeline {
         stage('Update Manifest in Git') {
             steps {
                 script {
-                    def manifest = "${MANIFEST_PATH}"
-                    def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
+                    def manifest = "ki23-k8s-manifests/deployment.yaml"
+                    def newImage = "docker.io/archcra/ki23-app:${IMAGE_TAG}" 
 
+            
                     sh "git clean -fd"
                     sh "git reset --hard HEAD"
-                    sh "sed -i \"s|image: .*|image: ${newImage}|g\" ${manifest}"
+                    sh "git checkout main"
+
+                    sh "sed -i \"s|image: docker.io/archcra/ki23-app:.*|image: ${newImage}|g\" ${manifest}"
 
 
                     def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
 
                     if (changes == "changed") {
-
                         sh 'git config --global user.email "jenkins@example.com"'
                         sh 'git config --global user.name "Jenkins"'
 
-                        sh 'git checkout main || git checkout -b main'
 
                         sh "git add ${manifest}"
                         sh "git commit -m \"chore: update image to ${IMAGE_TAG}\""
 
-                
+
                         withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
                             sh """
                                 set -e
                                 git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23-k8s-manifests.git
-                                git remote -v
                                 git push origin main
                             """
                         }
-                } else {
-                    echo "No changes in ${manifest}, skipping commit."
+
+                        echo " Successfully updated ${manifest} to ${newImage} and pushed to Git"
+                    } else {
+                        echo " No changes in ${manifest}, skipping commit and push."
+                    }
                 }
             }
         }
-    }
 
     }
+
+    
 
     post {
         success {
