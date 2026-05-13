@@ -70,10 +70,14 @@ pipeline {
 
 
                         withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
+                            sh "git remote -v"
+
                             sh """
                                 git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git
-                                git push origin main
+                                
                             """
+                            sh "git remote -v"
+                            sh "git push --set-upstream origin main"
                         }
 
                         echo " Successfully updated ${manifest} to ${newImage} and pushed to Git"
