@@ -44,25 +44,38 @@ pipeline {
         stage('Update Manifest in Git') {
             steps {
                 script {
-            
-                    sh "sed -i \"s|image: .*|image: ${DOCKER_REPO}:${IMAGE_TAG}|g\" ${MANIFEST_PATH}"
+                    def manifest = "${MANIFEST_PATH}"
+                    def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
 
-                    def changes = sh(script: "git diff --quiet ${MANIFEST_PATH} || echo 'changed'", returnStdout: true).trim()
+            
+                    sh "sed -i \"s|image: .*|image: ${newImage}|g\" ${manifest}"
+
+
+                    def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
 
                     if (changes == "changed") {
-                        sh """
-                            git config user.email "jenkins@example.com"
-                            git config user.name "Jenkins"
-                            git add ${MANIFEST_PATH}
-                            git commit -m "chore: update image to ${IMAGE_TAG}"
-                            git push origin HEAD:main
-                        """
-                    } else {
-                        echo "No changes in ${MANIFEST_PATH}, skipping commit."
-                    }
+
+                        sh 'git config --global user.email "jenkins@example.com"'
+                        sh 'git config --global user.name "Jenkins"'
+
+                
+                        sh "git add ${manifest}"
+                        sh "git commit -m \"chore: update image to ${IMAGE_TAG}\""
+
+                
+                        withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
+                            sh """
+                                git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/archcra/ki23.git
+                                git push origin HEAD:main
+                            """
+                        }
+                } else {
+                    echo "No changes in ${manifest}, skipping commit."
                 }
-           }
-       }
+            }
+        }
+    }
+
     }
 
     post {
