@@ -86,8 +86,6 @@ pipeline {
 
     }
 
-    
-
     post {
         success {
             echo ' Build, push and Git update succeeded! ArgoCD will auto-sync.'
