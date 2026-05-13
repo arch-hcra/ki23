@@ -51,7 +51,7 @@ pipeline {
                     sh "git reset --hard origin/main"
             
                     sh "git clean -fd"
-                    sh "git reset --hard HEAD"
+                    
                     
 
                     sh "sed -i \"s|image: docker.io/archcra/ki23-app:.*|image: ${newImage}|g\" ${manifest}"
@@ -71,7 +71,6 @@ pipeline {
 
                         withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
                             sh """
-                                set -e
                                 git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git
                                 git push origin main
                             """
