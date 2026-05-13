@@ -44,31 +44,33 @@ pipeline {
         stage('Update Manifest in Git') {
             steps {
                 script {
-                    sh '''
-                        sed -i "s|image: .*${DOCKER_REPO}:.*|image: ${DOCKER_REPO}:${IMAGE_TAG}|g" ${MANIFEST_PATH}
-                    '''
+            
+                    sh "sed -i \"s|image: .*|image: ${DOCKER_REPO}:${IMAGE_TAG}|g\" ${MANIFEST_PATH}"
 
-                    sh 'git diff'
+                    def changes = sh(script: "git diff --quiet ${MANIFEST_PATH} || echo 'changed'", returnStdout: true).trim()
 
-
-                    sh '''
-                        git config --global user.email "jenkins@example.com"
-                        git config --global user.name "Jenkins"
-                        git add ${MANIFEST_PATH}
-                        git commit -m "chore: update image to ${IMAGE_TAG}" || echo "No changes to commit"
-                        git push origin main
-                    '''
+                    if (changes == "changed") {
+                        sh """
+                            git config user.email "jenkins@example.com"
+                            git config user.name "Jenkins"
+                            git add ${MANIFEST_PATH}
+                            git commit -m "chore: update image to ${IMAGE_TAG}"
+                            git push origin main
+                        """
+                    } else {
+                        echo "No changes in ${MANIFEST_PATH}, skipping commit."
+                    }
                 }
-            }
-        }
+           }
+       }
     }
 
     post {
         success {
-            echo '✅ Build, push and Git update succeeded! ArgoCD will auto-sync.'
+            echo ' Build, push and Git update succeeded! ArgoCD will auto-sync.'
         }
         failure {
-            echo '❌ Tests failed or deployment failed! Check logs.'
+            echo ' Tests failed or deployment failed! Check logs.'
         }
     }
 }
