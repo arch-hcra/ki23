@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ki23-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ki23
+  template:
+    metadata:
+      labels:
+        app: ki23
+    spec:
+      containers:
+      - name: ki23
+        image: archhcra/ki23:latest
+        ports:
+        - containerPort: 5000
