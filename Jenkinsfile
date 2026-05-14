@@ -40,11 +40,14 @@ pipeline {
                     def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
                     def manifestPath = "ki23-k8s-manifests/deployment.yaml"
 
-
+            
                     def fileExists = sh(script: "test -f ${manifestPath} && echo 'exists' || echo 'missing'", returnStatus: true)
                     if (fileExists != 0) {
                         error "Файл манифеста не найден: ${manifestPath}"
                     }
+
+            
+                    sh "git checkout -- ${manifestPath}"
 
             
                     def currentImageLine = sh(script: "grep '^ *image:' ${manifestPath}", returnStdout: true).trim()
@@ -53,7 +56,6 @@ pipeline {
                     }
                     echo "Текущий image: ${currentImageLine}"
 
-            
                     def oldImage = currentImageLine.split(':')[1].trim()
                     echo "Обновление image с '${oldImage}' на '${newImage}'"
 
@@ -65,41 +67,41 @@ pipeline {
                     if (newImageLine != "image: ${newImage}") {
                         error "Ошибка: sed не применил изменения. Ожидается: 'image: ${newImage}', получено: '${newImageLine}'"
                     }
-
                     echo " Успешно обновлено: ${newImageLine}"
 
             
                     def diffOutput = sh(script: "git diff --quiet ${manifestPath} || echo 'changed'", returnStatus: true)
+
                     if (diffOutput == 0) {
-                        echo "Нет изменений в ${manifestPath} — пропускаем коммит."
+                        echo " Нет изменений в ${manifestPath} — возможно, файл уже актуален."
                     } else {
-                        echo "Изменения обнаружены в ${manifestPath}"
-
-
-                        sh "git config --global user.email 'jenkins@ci.example.com'"
-                        sh "git config --global user.name 'Jenkins CI'"
-
-                        sh "git add ${manifestPath}"
-                        sh "git commit -m \"chore: update image to ${newImage} [ci skip]\""
-
-                        def branch = env.GIT_BRANCH ?: 'main'
+                    echo " Изменения обнаружены в ${manifestPath}"
 
                 
-                        withCredentials([usernamePassword(
-                            credentialsId: 'arch-hcra',
-                            usernameVariable: 'GIT_USER',
-                            passwordVariable: 'GIT_PASS'
-                        )]) {
-                            sh "git remote set-url origin https://${GIT_USER}:${GIT_PASS}@github.com/arch-hcra/ki23.git"
-                            sh "git push origin ${branch}"
-                        }
+                    sh "git config --global user.email 'jenkins@ci.example.com'"
+                    sh "git config --global user.name 'Jenkins CI'"
 
-                        echo "✅ Успешно обновлён и запушены манифесты: ${newImage}"
+                    sh "git add ${manifestPath}"
+                    sh "git commit -m \"chore: update image to ${newImage} [ci skip]\""
+
+                    def branch = env.GIT_BRANCH ?: 'main'
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'arch-hcra',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_PASS'
+                    )]) {
+                        sh "git remote set-url origin https://${GIT_USER}:${GIT_PASS}@github.com/arch-hcra/ki23.git"
+                        sh "git push origin ${branch}"
                     }
+
+                    echo "✅ Успешно обновлён и запушены манифесты: ${newImage}"
                 }
             }
         }
     }
+}
+
 
     post {
         success {
