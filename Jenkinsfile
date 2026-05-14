@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
     }
@@ -12,15 +11,22 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install Dependencies in Venv') {
             steps {
-                sh 'pip3 install --no-cache-dir -r requirements.txt'
+                sh '''
+                    python3 -m venv venv
+                    source venv/bin/activate
+                    pip install --no-cache-dir -r requirements.txt
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'python3 -m unittest test_app.py'
+                sh '''
+                    source venv/bin/activate
+                    python3 -m unittest test_app.py
+                '''
             }
         }
 
