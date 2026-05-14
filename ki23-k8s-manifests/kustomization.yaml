@@ -5,4 +5,4 @@ resources:
   - service.yaml
 images:
   - name: docker.io/archcra/ki23-app
-    newTag: ${IMAGE_TAG}
+    newTag: 0.0.0-dev
