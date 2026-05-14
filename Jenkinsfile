@@ -63,15 +63,13 @@ pipeline {
                     if (diffOutput == "changed") {
                         echo " Изменения обнаружены в ${manifestPath}"
 
-                        sh "git config --global user.email 'admin@example.com'"
-                        sh "git config --global user.name 'Jenkins CI'"
-
 
                         sh "git add ${manifestPath}"
                         sh "git commit -m \"chore: update image to ${newImage} [ci skip]\""
 
-                
-                        sh "git push origin ${env.GIT_BRANCH}"
+                        def branch = env.GIT_BRANCH ?: 'main'
+                        echo "Pushing to origin/${branch}"
+                        sh "git push origin ${branch}"
 
                         echo " Успешно обновлён и запушены манифесты: ${newImage}"
                     } else {
