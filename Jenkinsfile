@@ -46,7 +46,7 @@ pipeline {
                     sh "git reset --hard origin/main"
 
 
-                    sh "sed -i 's|^[[:space:]]*image:[[:space:]]*.*|image: ${newImage}|' ${MANIFEST_PATH}"
+                    sh "sed -i \"s|image: ${DOCKER_REPO}:.*|image: ${newImage}|g\" ${manifest}"
 
 
                     def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
