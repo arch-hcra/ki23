@@ -68,8 +68,8 @@ pipeline {
                         sh "git commit -m \"chore: update image to ${newImage} [ci skip]\""
 
                         def branch = env.GIT_BRANCH ?: 'main'
-                        echo "Pushing to origin/${branch}"
-                        sh "git push origin ${branch}"
+                        echo "Pushing to origin/main"
+                        sh "git push origin main"
 
                         echo " Успешно обновлён и запушены манифесты: ${newImage}"
                     } else {
