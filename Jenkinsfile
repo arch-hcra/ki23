@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
-        IMAGE_TAG = "${env.GIT_COMMIT.take(8)}"
         MANIFEST_PATH = "ki23-k8s-manifests/deployment.yaml"
+        GIT_BRANCH = "main"
     }
 
     stages {
@@ -23,13 +23,28 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    def image = docker.build("${DOCKER_REPO}:${IMAGE_TAG}")
-                    withCredentials([usernamePassword(credentialsId: 'docker-token', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    def gitCommitShort = "${env.GIT_COMMIT}".take(8)
+                    def imageWithTag = "${DOCKER_REPO}:${gitCommitShort}"
+
+
+                    env.IMAGE_TAG = gitCommitShort
+
+
+                    def image = docker.build(imageWithTag)
+
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-token',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            docker push ${DOCKER_REPO}:${IMAGE_TAG}
+                            docker push "$IMAGE_TAG"
                         '''
                     }
+
+                    echo " Образ запущен: ${imageWithTag}"
                 }
             }
         }
@@ -38,37 +53,41 @@ pipeline {
             steps {
                 script {
                     def manifest = "${MANIFEST_PATH}"
-                    def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
+                    def newImage = "${DOCKER_REPO}:${env.IMAGE_TAG}"
 
-
-                    sh "git checkout main"
+ 
+                    sh "git checkout ${GIT_BRANCH}"
                     sh "git fetch origin"
-                    sh "git reset --hard origin/main"
+                    sh "git reset --hard origin/${GIT_BRANCH}"
 
 
                     sh "sed -i \"s|image: ${DOCKER_REPO}:.*|image: ${newImage}|g\" ${manifest}"
 
 
-                    def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
+                    def diff = sh(script: "git diff --cached ${manifest} || true", returnStdout: true).trim()
 
-                    if (changes == "changed") {
-                        echo " Change ${manifest}: ${newImage}"
+                    if (diff != "") {
+                        echo " Изменён образ в ${manifest}: ${newImage}"
 
-  
+
                         sh 'git config --global user.email "admin@example.com"'
-                        sh 'git config --global user.name "Jenkins CI"'
+                        sh 'git config --global user.name "admin"'
+
 
                         sh "git add ${manifest}"
-                        sh "git commit -m \"chore: update image to ${IMAGE_TAG}\""
+                        sh "git commit -m \"chore: update image to ${env.IMAGE_TAG}\""
 
-                        withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
+                        withCredentials([string(
+                            credentialsId: 'new_jenk_ci/cd',
+                            variable: 'GITHUB_TOKEN'
+                        )]) {
                             sh "git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git"
-                            sh "git push origin main"
+                            sh "git push origin ${GIT_BRANCH}"
                         }
 
-                        echo " Успешно обновлён и запушены манифесты в Git: ${newImage}"
+                        echo "🎉 Успешно обновлён и запушены манифесты в Git: ${newImage}"
                     } else {
-                        echo " Нет изменений в ${manifest}, пропускаем коммит."
+                        echo "ℹ Нет изменений в ${manifest}, пропускаем коммит."
                     }
                 }
             }
@@ -77,10 +96,10 @@ pipeline {
 
     post {
         success {
-            echo " Сборка, пуш и обновление манифеста прошли успешно. ArgoCD автоматически синхронизирует изменения."
+            echo "🎉 Сборка, пуш и обновление манифеста прошли успешно. ArgoCD автоматически синхронизирует изменения."
         }
         failure {
-            echo " Ошибка: проверьте логи сборки и убедитесь, что тесты прошли и образ запушено."
+            echo "❌ Ошибка: проверьте логи сборки. Убедитесь, что тесты прошли, образ запушено, и манифест обновлён."
         }
     }
 }
