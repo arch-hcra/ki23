@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
-        MANIFEST_PATH = "ki23-k8s-manifests/kustomization.yaml"  // ← ВАЖНО: теперь kustomization.yaml, а не deployment.yaml!
-        GIT_BRANCH = "main"
+        IMAGE_TAG = "${env.GIT_COMMIT.take(8)}"
+        MANIFEST_PATH = "ki23-k8s-manifests/deployment.yaml"
     }
 
     stages {
@@ -23,73 +23,52 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    def gitCommitShort = "${env.GIT_COMMIT}".take(8)
-                    def imageWithTag = "${DOCKER_REPO}:${gitCommitShort}"
-
-                    def image = docker.build(imageWithTag)
-
-                    withCredentials([usernamePassword(
-                        credentialsId: 'docker-token',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
+                    def image = docker.build("${DOCKER_REPO}:${IMAGE_TAG}")
+                    withCredentials([usernamePassword(credentialsId: 'docker-token', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            docker push "$IMAGE_TAG"
+                            docker push ${DOCKER_REPO}:${IMAGE_TAG}
                         '''
                     }
-
-
-                    env.IMAGE_TAG = gitCommitShort
                 }
             }
         }
 
-        stage('Update Kustomize Manifest in Git') {
+        stage('Update Manifest in Git') {
             steps {
                 script {
                     def manifest = "${MANIFEST_PATH}"
-                    def newImage = "${DOCKER_REPO}:${env.IMAGE_TAG}"
+                    def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
 
 
-                    sh "git checkout ${GIT_BRANCH}"
+                    sh "git checkout main"
                     sh "git fetch origin"
-                    sh "git reset --hard origin/${GIT_BRANCH}"
+                    sh "git reset --hard origin/main"
 
 
-                    def kustomizeContent = readFile(manifest)
-                    if (!kustomizeContent.contains("newTag:")) {
-                        error "kustomization.yaml не содержит 'newTag:' — убедитесь, что он настроен для замены тега"
-                    }
+                    sh "sed -i \"s|image: ${DOCKER_REPO}:.*|image: ${newImage}|g\" ${manifest}"
 
-                    
-                    sh "sed -i 's|newTag: .*|newTag: ${env.IMAGE_TAG}|' ${manifest}"
 
-              
-                    def diff = sh(script: "git diff --cached ${manifest} || true", returnStdout: true).trim()
+                    def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
 
-                    if (diff != "") {
-                        echo "✅ Изменён тег в ${manifest}: ${env.IMAGE_TAG}"
+                    if (changes == "changed") {
+                        echo " Change ${manifest}: ${newImage}"
 
-                   
-                        sh 'git config --global user.email "jenkins@ci.example.com"'
+  
+                        sh 'git config --global user.email "admin@example.com"'
                         sh 'git config --global user.name "Jenkins CI"'
 
-                   
                         sh "git add ${manifest}"
-                        sh "git commit -m \"chore: update image tag to ${env.IMAGE_TAG}\""
+                        sh "git commit -m \"chore: update image to ${IMAGE_TAG}\""
 
-                        withCredentials([string(
-                            credentialsId: 'new_jenk_ci/cd',
-                            variable: 'GITHUB_TOKEN'
-                        )]) {
+                        withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
                             sh "git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git"
-                            sh "git push origin ${GIT_BRANCH}"
+                            sh "git push origin main"
                         }
 
-                        echo "✅ Успешно обновлён и запушены манифесты в Git: ${newImage}"
+                        echo " Успешно обновлён и запушены манифесты в Git: ${newImage}"
                     } else {
-                        echo "ℹ️ Нет изменений в ${manifest}, пропускаем коммит."
+                        echo " Нет изменений в ${manifest}, пропускаем коммит."
                     }
                 }
             }
@@ -98,10 +77,10 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Сборка, пуш и обновление манифеста прошли успешно. ArgoCD автоматически синхронизирует изменения."
+            echo " Сборка, пуш и обновление манифеста прошли успешно. ArgoCD автоматически синхронизирует изменения."
         }
         failure {
-            echo "❌ Ошибка: проверьте логи сборки. Убедитесь, что тесты прошли, образ запушен, и манифест обновлён."
+            echo " Ошибка: проверьте логи сборки и убедитесь, что тесты прошли и образ запушено."
         }
     }
 }
