@@ -12,11 +12,15 @@ pipeline {
             }
         }
 
+        stage('Install Dependencies') {
+            steps {
+                sh 'pip3 install --no-cache-dir -r requirements.txt'
+            }
+        }
+
         stage('Run Tests') {
             steps {
-                script {
-                    sh 'python3 -m unittest test_app.py'
-                }
+                sh 'python3 -m unittest test_app.py'
             }
         }
 
@@ -24,7 +28,6 @@ pipeline {
             steps {
                 script {
                     def image = docker.build(DOCKER_REPO + ":latest")
-
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-token',
                         usernameVariable: 'DOCKER_USER',
@@ -46,7 +49,6 @@ pipeline {
         }
         failure {
             echo "❌ Pipeline failed. Check test logs or Docker build."
-   
             archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true
         }
     }
