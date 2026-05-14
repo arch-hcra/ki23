@@ -7,6 +7,20 @@ pipeline {
     }
 
     stages {
+
+         
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'python3 -m unittest test_app.py'
+            }
+        }
+
         stage('Build & Push :latest') {
             steps {
                 script {
@@ -25,21 +39,5 @@ pipeline {
             }
         }
 
-        stage('Update Manifest') {
-            steps {
-                script {
-                    sh "sed -i 's|^ *image: .*|image: ${DOCKER_REPO}:latest|' ${MANIFEST_PATH}"
-                    sh "git add ${MANIFEST_PATH}"
-                    sh "git commit -m 'chore: update image to latest [ci skip]'"
-                    sh "git remote set-url origin https://${GIT_USER}:${GIT_PASS}@github.com/arch-hcra/ki23.git"
-                    sh "git push origin main"
-                }
-            }
-        }
-    }
-
-    post {
-        success { echo "✅ Image :latest pushed & manifest updated. ArgoCD will sync." }
-        failure { echo "❌ Pipeline failed. Check logs for image push or Git commit errors." }
     }
 }
