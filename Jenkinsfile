@@ -15,7 +15,7 @@ pipeline {
             steps {
                 sh '''
                     python3 -m venv venv
-                    source venv/bin/activate
+                    . venv/bin/activate
                     pip install --no-cache-dir -r requirements.txt
                 '''
             }
@@ -24,7 +24,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    source venv/bin/activate
+                    . venv/bin/activate
                     python3 -m unittest test_app.py
                 '''
             }
