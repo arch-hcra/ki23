@@ -28,7 +28,7 @@ pipeline {
         stage('Update Manifest') {
             steps {
                 script {
-                    sh "sed -i 's|^ *image: .*|image: ${DOCKER_REPO}:0.0.0-dev|' ${MANIFEST_PATH}"
+                    sh "sed -i 's|^ *image: .*|image: ${DOCKER_REPO}:latest|' ${MANIFEST_PATH}"
                     sh "git add ${MANIFEST_PATH}"
                     sh "git commit -m 'chore: update image to latest [ci skip]'"
                     sh "git remote set-url origin https://${GIT_USER}:${GIT_PASS}@github.com/arch-hcra/ki23.git"

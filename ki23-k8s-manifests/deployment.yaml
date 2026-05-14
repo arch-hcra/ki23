@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: ki23-app
-        image: docker.io/archcra/ki23-app:0.0.0-dev
+        image: docker.io/archcra/ki23-app:latest
         ports:
         - containerPort: 5000
         resources:
