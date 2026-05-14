@@ -1,1 +1,2 @@
 unittest-xml-reporting==3.2.0
+Flask==3.0.0

@@ -3,12 +3,9 @@ pipeline {
 
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
-        MANIFEST_PATH = "ki23-k8s-manifests/deployment.yaml"
     }
 
     stages {
-
-         
         stage('Checkout') {
             steps {
                 checkout scm
@@ -17,7 +14,9 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh 'python3 -m unittest test_app.py'
+                script {
+                    sh 'python3 -m unittest test_app.py'
+                }
             }
         }
 
@@ -25,6 +24,7 @@ pipeline {
             steps {
                 script {
                     def image = docker.build(DOCKER_REPO + ":latest")
+
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-token',
                         usernameVariable: 'DOCKER_USER',
@@ -32,12 +32,22 @@ pipeline {
                     )]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            docker push $DOCKER_REPO:latest
+                            docker push "$DOCKER_REPO:latest"
                         '''
                     }
                 }
             }
         }
+    }
 
+    post {
+        success {
+            echo "✅ Image :latest pushed successfully. Check pod logs for startup issues."
+        }
+        failure {
+            echo "❌ Pipeline failed. Check test logs or Docker build."
+   
+            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true
+        }
     }
 }
