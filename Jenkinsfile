@@ -69,7 +69,16 @@ pipeline {
 
                         def branch = env.GIT_BRANCH ?: 'main'
                         echo "Pushing to origin/main"
-                        sh "git push origin main"
+                        withCredentials([usernamePassword(
+                            credentialsId: 'arch-hcra',
+                            usernameVariable: 'GIT_USER',
+                            passwordVariable: 'GIT_PASS'
+                        )]) {
+                            sh '''
+                                git remote set-url origin https://${GIT_USER}:${GIT_PASS}@github.com/arch-hcra/ki23.git
+                                git push origin main
+                            '''
+                }
 
                         echo " Успешно обновлён и запушены манифесты: ${newImage}"
                     } else {
