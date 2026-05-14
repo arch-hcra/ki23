@@ -13,10 +13,16 @@ spec:
         app: ki23-app
       annotations:
         sidecar.istio.io/inject: "true"
-        sidecar.istio.io/iptables: "legacy"
     spec:
       containers:
-        - name: ki23-app
-          image: docker.io/archcra/ki23-app:0.0.0-dev
-          ports:
-            - containerPort: 5000
+      - name: ki23-app
+        image: docker.io/archcra/ki23-app:0.0.0-dev
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
