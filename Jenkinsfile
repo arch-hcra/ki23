@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
-        IMAGE_TAG   = "${env.GIT_COMMIT.take(8)}"
+        IMAGE_TAG = "${env.GIT_COMMIT.take(8)}"
         MANIFEST_PATH = "ki23-k8s-manifests/deployment.yaml"
     }
 
@@ -23,15 +23,8 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-
                     def image = docker.build("${DOCKER_REPO}:${IMAGE_TAG}")
-                    
-
-                    withCredentials([usernamePassword(
-                        credentialsId: 'docker-token',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-token', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                             docker push ${DOCKER_REPO}:${IMAGE_TAG}
@@ -44,58 +37,50 @@ pipeline {
         stage('Update Manifest in Git') {
             steps {
                 script {
-                    def manifest = "ki23-k8s-manifests/deployment.yaml"
-                    def newImage = "docker.io/archcra/ki23-app:${IMAGE_TAG}" 
+                    def manifest = "${MANIFEST_PATH}"
+                    def newImage = "${DOCKER_REPO}:${IMAGE_TAG}"
+
+
                     sh "git checkout main"
                     sh "git fetch origin"
                     sh "git reset --hard origin/main"
-            
-                    sh "git clean -fd"
-                    
-                    
 
-                    sh "sed -i \"s|image: docker.io/archcra/ki23-app:.*|image: ${newImage}|g\" ${manifest}"
+
+                    sh "sed -i \"s|image: ${DOCKER_REPO}:.*|image: ${newImage}|g\" ${manifest}"
 
 
                     def changes = sh(script: "git diff --quiet ${manifest} || echo 'changed'", returnStdout: true).trim()
 
                     if (changes == "changed") {
-                        echo " Изменения обнаружены в ${manifest}: ${newImage}"
-                        sh 'git config --global user.email "admin@example.com"'
-                        sh 'git config --global user.name "admin"'
+                        echo " Change ${manifest}: ${newImage}"
 
+  
+                        sh 'git config --global user.email "admin@example.com"'
+                        sh 'git config --global user.name "Jenkins CI"'
 
                         sh "git add ${manifest}"
                         sh "git commit -m \"chore: update image to ${IMAGE_TAG}\""
 
-
                         withCredentials([string(credentialsId: 'new_jenk_ci/cd', variable: 'GITHUB_TOKEN')]) {
-                            sh "git remote -v"
-
-                            sh """
-                                git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git
-                                
-                            """
-                            sh "git remote -v"
-                            sh "git push --set-upstream origin main"
+                            sh "git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/arch-hcra/ki23.git"
+                            sh "git push origin main"
                         }
 
-                        echo " Successfully updated ${manifest} to ${newImage} and pushed to Git"
+                        echo " Успешно обновлён и запушены манифесты в Git: ${newImage}"
                     } else {
-                        echo " No changes in ${manifest}, skipping commit and push."
+                        echo " Нет изменений в ${manifest}, пропускаем коммит."
                     }
                 }
             }
         }
-
     }
 
     post {
         success {
-            echo ' Build, push and Git update succeeded! ArgoCD will auto-sync.'
+            echo " Сборка, пуш и обновление манифеста прошли успешно. ArgoCD автоматически синхронизирует изменения."
         }
         failure {
-            echo ' Tests failed or deployment failed! Check logs.'
+            echo " Ошибка: проверьте логи сборки и убедитесь, что тесты прошли и образ запушено."
         }
     }
 }
