@@ -67,7 +67,9 @@ pipeline {
                     } else {
                         echo "🔧 Обновляем тег в ${manifest}: ${newImage}"
 
-                        sh "sed -i \"s|image:[[:space:]]*['\"]?${DOCKER_REPO}:.*['\"]?|image: ${newImage}|g\" ${manifest}"
+                        sh """
+                            sed 's|image:[[:space:]]*['"'"']?${DOCKER_REPO}:.*['"'"']?|image: ${newImage}|g' ${manifest} > ${manifest}.tmp && mv ${manifest}.tmp ${manifest}
+                        """
                     }
 
    
