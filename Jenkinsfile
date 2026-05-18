@@ -1,7 +1,12 @@
 pipeline {
     agent any
+
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
+        GIT_COMMIT_SHORT = sh(
+            script: 'git rev-parse --short HEAD',
+            returnStdout: true
+        ).trim()
     }
 
     stages {
@@ -30,10 +35,11 @@ pipeline {
             }
         }
 
-        stage('Build & Pushs :latest') {
+        stage('Build & Push Docker Image') {
             steps {
                 script {
-                    def image = docker.build(DOCKER_REPO + ":latest")
+                    sh "docker build -t ${DOCKER_REPO}:${GIT_COMMIT_SHORT} ."
+
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-token',
                         usernameVariable: 'DOCKER_USER',
@@ -41,9 +47,10 @@ pipeline {
                     )]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            docker push "$DOCKER_REPO:latest"
+                            docker push "${DOCKER_REPO}:${GIT_COMMIT_SHORT}"
                         '''
                     }
+
                 }
             }
         }
@@ -51,7 +58,17 @@ pipeline {
 
     post {
         success {
-            echo "✅ Image :latest pushed successfully. Check pod logs for startup issues."
+            echo "✅ Image ${DOCKER_REPO}:${GIT_COMMIT_SHORT} pushed successfully."
+            sh """
+                git config --global user.email "jenkins@localhost"
+                git config --global user.name "Jenkins"
+                git checkout main
+                git pull origin main
+                sed -i "s|image: docker.io/archcra/ki23-app:.*|image: docker.io/archcra/ki23-app:${GIT_COMMIT_SHORT}|g"     ki23-k8s-manifests/deployment.yaml
+                git add ki23-k8s-manifests/deployment.yaml
+                git commit -m "chore: update image tag to ${GIT_COMMIT_SHORT}"
+                git push origin main
+            """
         }
         failure {
             echo "❌ Pipeline failed. Check test logs or Docker build."
@@ -59,4 +76,3 @@ pipeline {
         }
     }
 }
-
