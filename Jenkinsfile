@@ -30,7 +30,7 @@ pipeline {
             }
         }
 
-        stage('Build & Push :latest') {
+        stage('Build & Pushs :latest') {
             steps {
                 script {
                     def image = docker.build(DOCKER_REPO + ":latest")
