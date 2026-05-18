@@ -49,7 +49,7 @@ pipeline {
                     )]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            docker push "${DOCKER_REPO}:${env.GIT_COMMIT_SHORT}"
+                            docker push "$DOCKER_REPO:$GIT_COMMIT_SHORT"
                         '''
                     }
                     
