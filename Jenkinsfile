@@ -3,16 +3,14 @@ pipeline {
 
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
-        KUSTOMIZATION_PATH = "ki23-k8s-manifests/kustomization.yaml"  // Путь к вашему kustomization.yaml
+        KUSTOMIZATION_PATH = "ki23-k8s-manifests/kustomization.yaml"
     }
 
     stages {
-  
         stage('Checkout') {
             steps {
                 checkout scm
                 script {
-
                     env.GIT_COMMIT_SHORT = sh(
                         script: 'git rev-parse --short HEAD',
                         returnStdout: true
@@ -20,7 +18,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Run Tests') {
             steps {
                 sh '''
@@ -29,13 +27,13 @@ pipeline {
                     pip install -r requirements.txt
                     python3 -m unittest test_app.py
                 '''
-                }
             }
+        }
 
         stage('Build & Push Docker Image') {
             steps {
                 script {
-
+ 
                     sh "docker build -t ${DOCKER_REPO}:${env.GIT_COMMIT_SHORT} ."
 
 
@@ -44,29 +42,28 @@ pipeline {
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
-                        sh '''
+
+                        sh """
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                             docker push "${DOCKER_REPO}:${env.GIT_COMMIT_SHORT}"
-                        '''
+                        """
                     }
                 }
             }
         }
 
-        // 3. Обновляем тег в kustomization.yaml
         stage('Update Kustomization') {
             steps {
                 script {
 
                     sh """
-                        sed -i "s/newTag: .*/newTag: ${env.GIT_COMMIT_SHORT}/g" ${KUSTOMIZATION_PATH}
-                        cat ${KUSTOMIZATION_PATH}  # Для отладки
+                        sed -i "s|newTag: .*|newTag: ${env.GIT_COMMIT_SHORT}|g" ${KUSTOMIZATION_PATH}
+                        cat ${KUSTOMIZATION_PATH}
                     """
                 }
             }
         }
     }
-
 
     post {
         success {
