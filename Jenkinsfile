@@ -53,9 +53,6 @@ pipeline {
                         '''
                     }
                     
-  
-                    docker.tag("${DOCKER_REPO}:${env.GIT_COMMIT_SHORT}", "${DOCKER_REPO}:latest")
-                    docker.push("${DOCKER_REPO}:latest")
                 }
             }
         }
