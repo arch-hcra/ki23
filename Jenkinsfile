@@ -63,8 +63,8 @@ pipeline {
                 git config --global user.email "jenkins@localhost"
                 git config --global user.name "Jenkins"
                 git checkout main
-                git pull origin main
-                sed -i "s|image: docker.io/archcra/ki23-app:.*|image: docker.io/archcra/ki23-app:${GIT_COMMIT_SHORT}|g"     ki23-k8s-manifests/deployment.yaml
+                git pull --no-rebase origin main  # <-- Добавьте --no-rebase
+                sed -i "s|image: docker.io/archcra/ki23-app:.*|image: docker.io/archcra/ki23-app:${GIT_COMMIT_SHORT}|g" ki23-k8s-manifests/deployment.yaml
                 git add ki23-k8s-manifests/deployment.yaml
                 git commit -m "chore: update image tag to ${GIT_COMMIT_SHORT}"
                 git push origin main
