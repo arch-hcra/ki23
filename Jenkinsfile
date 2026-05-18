@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm  
+                checkout scm
             }
         }
 
@@ -66,7 +66,7 @@ pipeline {
                 sed -i "s|image: docker.io/archcra/ki23-app:.*|image: docker.io/archcra/ki23-app:${GIT_COMMIT_SHORT}|g" ki23-k8s-manifests/deployment.yaml
                 git add ki23-k8s-manifests/deployment.yaml
                 git commit -m "chore: update image tag to ${GIT_COMMIT_SHORT}"
-                git push origin main  // Работает через SSH
+                git push origin main
             """
         }
         failure {
