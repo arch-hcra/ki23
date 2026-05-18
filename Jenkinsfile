@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     environment {
         DOCKER_REPO = "docker.io/archcra/ki23-app"
     }
@@ -9,12 +8,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                script {
-                    env.GIT_COMMIT_SHORT = sh(
-                        script: 'git rev-parse --short HEAD',
-                        returnStdout: true
-                    ).trim()
-                }
             }
         }
 
@@ -37,11 +30,10 @@ pipeline {
             }
         }
 
-        stage('Build & Push Git Commit Tag') {
+        stage('Build & Pushs :latest') {
             steps {
                 script {
-                    def image = docker.build("${DOCKER_REPO}:${env.GIT_COMMIT_SHORT}")
-                    
+                    def image = docker.build(DOCKER_REPO + ":latest")
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-token',
                         usernameVariable: 'DOCKER_USER',
@@ -49,10 +41,9 @@ pipeline {
                     )]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            docker push "$DOCKER_REPO:$GIT_COMMIT_SHORT"
+                            docker push "$DOCKER_REPO:latest"
                         '''
                     }
-                    
                 }
             }
         }
@@ -60,17 +51,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Image ${DOCKER_REPO}:${env.GIT_COMMIT_SHORT} pushed successfully."
-
-            sh '''
-                git config --global user.email "jenkins@localhost"
-                git config --global user.name "Jenkins"
-                git checkout main
-                sed -i "s|image: docker.io/archcra/ki23-app:.*|image: docker.io/archcra/ki23-app:${env.GIT_COMMIT_SHORT}|g" ki23-k8s-manifests/deployment.yaml
-                git add ki23-k8s-manifests/deployment.yaml
-                git commit -m "chore: update image tag to ${env.GIT_COMMIT_SHORT}"
-                git push origin main
-            '''
+            echo "✅ Image :latest pushed successfully. Check pod logs for startup issues."
         }
         failure {
             echo "❌ Pipeline failed. Check test logs or Docker build."
@@ -78,3 +59,4 @@ pipeline {
         }
     }
 }
+
